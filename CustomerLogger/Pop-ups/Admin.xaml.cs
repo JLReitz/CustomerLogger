@@ -47,21 +47,39 @@ namespace CustomerLogger
         public bool Authenticate()
         {
             RegistryKey reg = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\CustomerLogger");
+            string sStoredPassword;
 
-            string sStoredPassword = reg.GetValue("Admin_Password").ToString();
+            try
+            {
+                //Grab the registry entry for admin password
+                sStoredPassword = reg.GetValue("Admin_Password").ToString();
+            }
+            catch(Exception E)
+            {
+                //The password is not stored yet
+                //Ask the user for a new one, then store it in a new registry entry
+                NewPasswordWindow NewPasswordWindow = new NewPasswordWindow();
+                NewPasswordWindow.ShowDialog();
+                //Now grab the entry
+                sStoredPassword = reg.GetValue("Admin_Password").ToString();
+            }
+
+            //Unescape the hashed string as all '\' are doubled when converted to string
             sStoredPassword = Regex.Unescape(sStoredPassword);
 
+            //Open password window
             PasswordWindow passwordWindow = new PasswordWindow();
             passwordWindow.ShowDialog();
 
+            //Hash user-input password
             byte[] data = System.Text.Encoding.ASCII.GetBytes(passwordWindow.Password);
             data = new System.Security.Cryptography.SHA256Managed().ComputeHash(data);
             string sHashedPassword = System.Text.Encoding.ASCII.GetString(data);
 
-            if (sHashedPassword == sStoredPassword)
-                return true;
-            else
-                return false;
+            if (sHashedPassword == sStoredPassword) //If the two hashes match
+                return true;                            //Return true
+            else                                    //Else
+                return false;                           //Return false
         }
 
         //  Private Functions   ///////////////////////////////////////////////////////////////////
